@@ -7,7 +7,7 @@ import math
 import pickle
 from utils.NoiseInjection import *
 import skvideo
-skvideo.setFFmpegPath('C:/Deep/Tools/ffmpeg/bin/')
+skvideo.setFFmpegPath('C:/FFmpeg/bin/')
 import skvideo.io
 import torchvision.transforms
 import re

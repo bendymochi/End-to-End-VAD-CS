@@ -10,11 +10,13 @@ from torch.autograd import Variable
 from utils.logger import Logger
 import os
 import numpy as np
+from sklearn.metrics import f1_score
 
 if __name__ == '__main__':
-
+    parser = argparse.ArgumentParser()
     # Hyper Parameters
     parser.add_argument('--batch_size', type=int, default=16, help='training batch size')
+    parser.add_argument('--test_batch_size', type=int, default=16, help='test batch size')
     parser.add_argument('--time_depth', type=int, default=15, help='number of time frames in each video\audio sample')
     parser.add_argument('--workers', type=int, default=0, help='num workers for data loading')
     parser.add_argument('--print_freq', type=int, default=50, help='freq of printing stats')
@@ -72,6 +74,9 @@ if __name__ == '__main__':
     all_pred = []
     all_gt = []
 
+    predicted_dic = {}
+    accuracy_dic = {}
+
     for i, data in enumerate(test_loader):
 
         states_test = net.init_hidden(is_train=False)
@@ -79,31 +84,44 @@ if __name__ == '__main__':
         if args.arch == 'Video' or args.arch == 'Audio':  # single modality
 
             input, target = data  # input is of shape torch.Size([batch, channels, frames, width, height])
+            
             input_var = Variable(input.unsqueeze(1)).cuda()
             target_var = Variable(target.squeeze()).cuda()
 
             output = net(input_var, states_test)
+            
 
         else:  # multiple modalities
 
             audio, video, target = data
+            print("audio: ", audio)
+            print("video: ", video)
+            print("target: ", target)
             audio_var = Variable(audio.unsqueeze(1)).cuda()
             video_var = Variable(video.unsqueeze(1)).cuda()
             target_var = Variable(target.squeeze()).cuda()
 
             output = net(audio_var, video_var, states_test)
+            print("output: ", output.type(), "hello", output)
 
         loss = criterion(output.squeeze(), target_var)
 
         # measure accuracy and record loss
         _, predicted = torch.max(output.data, 1)
+        predicted_dic[i] = predicted
+        # print("Let's see", predicted == target.squeeze().cuda(), "LOL", (predicted == target.squeeze().cuda()).sum())
         accuracy = (predicted == target.squeeze().cuda()).sum().type(torch.FloatTensor)
         accuracy.mul_((100.0 / args.test_batch_size))
+        accuracy_dic[i] = accuracy
         test_loss.update(loss.item(), args.test_batch_size)
         test_acc.update(accuracy.item(), args.test_batch_size)
 
         if i % args.print_freq == 0:
             print('Test: [{0}/{1}]'.format(i, len(test_loader)))
 
+    f1_score(all_gt, all_pred, average="weighted")
+
+    print("This is predicated", predicted_dic)
+    print("This is accuracy", accuracy_dic)
     print('Test finished.')
-    print('final loss on test set is {} and final accuracy is {}'.format(loss_test.avg,top1_test.avg))
+    print('final loss on test set is {} and final accuracy is {}'.format(test_loss.avg,test_acc.avg))

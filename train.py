@@ -1,6 +1,7 @@
 from __future__ import print_function, division
 import argparse
 import torch
+torch.cuda.empty_cache()
 import torch.nn as nn
 from utils import utils as utils
 from torch.utils.data import DataLoader
@@ -87,7 +88,7 @@ if __name__ == '__main__':
 
     # init from a saved checkpoint
 
-    if args.pre_train is not '':
+    if args.pre_train != '':
         model_name = os.path.join('pre_trained', args.arch, args.pre_train)
 
         if os.path.isfile(model_name):
